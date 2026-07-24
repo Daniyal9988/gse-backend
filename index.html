@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Multiple Serialized Sales - Global Safety Equipment</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 650px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: auto; }
+        h2 { color: #333; margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 15px; position: relative; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        button { background: #28a745; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #218838; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 4px; text-align: center; display: none; }
+        .success { background: #d4edda; color: #155724; }
+        .preview-box { margin-top: 20px; background: #e9ecef; padding: 15px; border-radius: 4px; font-size: 14px; }
+        .hint { font-size: 12px; color: #666; margin-top: 3px; }
+
+        /* Multi-select tag container styling */
+        .selected-tags-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            min-height: 38px;
+            padding: 6px;
+            border: 1px dashed #bbb;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .tag {
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tag .remove-btn {
+            cursor: pointer;
+            font-weight: bold;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+        .tag .remove-btn:hover { background: rgba(0,0,0,0.4); }
+
+        /* Live Suggestions Dropdown */
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 160px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .suggestion-item:hover {
+            background: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Record Multiple Serialized Sales (Demo)</h2>
+    <div id="alertMessage" class="message"></div>
+    
+    <form id="saleForm">
+        <div class="form-group">
+            <label for="saleDate">Date:</label>
+            <input type="date" id="saleDate" required>
+        </div>
+
+        <div class="form-group">
+            <label for="clientSelect">1. Select Customer (From Database):</label>
+            <select id="clientSelect" required>
+                <option value="">-- Choose Customer --</option>
+                <option value="Qudra Company Ltd">Qudra Company Ltd</option>
+                <option value="WAJDA GLOBAL COMPANY">WAJDA GLOBAL COMPANY</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="itemSelect">2. Select Item Code (From Database):</label>
+            <select id="itemSelect" required>
+                <option value="">-- Choose Item Code --</option>
+                <option value="GDL-330">GDL-330</option>
+                <option value="GH-60">GH-60</option>
+            </select>
+        </div>
+
+        <!-- Field 3: Multi-serial search input and selected tags -->
+        <div class="form-group">
+            <label for="serialSearch">3. Search & Add Multiple Serial Numbers:</label>
+            <input type="text" id="serialSearch" placeholder="Type digits e.g. 221 or 085" autocomplete="off">
+            <div id="suggestionsBox" class="suggestions-dropdown"></div>
+            <div class="hint">Available Unsold Serials in DB: GDL330-A-0221, GDL330-A-0854, GDL330-B-0312, GDL330-C-0445, GDL330-D-0991</div>
+            
+            <div style="margin-top: 8px; font-size: 13px; font-weight: bold; color: #444;">Selected Serials to Sell:</div>
+            <div id="selectedTagsContainer" class="selected-tags-box">
+                <span id="noTagsText" style="color: #999; font-size: 13px; padding: 4px;">No serials selected yet. Click items from suggestions below.</span>
+            </div>
+        </div>
+
+        <button type="submit">Mark All Selected as SOLD & Save</button>
+    </form>
+
+    <div class="preview-box">
+        <strong>Database Status Update Simulation:</strong>
+        <pre id="outputLog" style="margin: 5px 0 0 0; color: #333;">No update performed yet.</pre>
+    </div>
+</div>
+
+<script>
+    // Set today's date by default
+    document.getElementById('saleDate').valueAsDate = new Date();
+
+    // Dummy database table representing pre-imported serial numbers (Status: 'unsold')
+    const dbInventorySerials = [
+        { id: 101, item_code: 'GDL-330', serial_number: 'GDL330-A-0221', status: 'unsold' },
+        { id: 102, item_code: 'GDL-330', serial_number: 'GDL330-A-0854', status: 'unsold' },
+        { id: 103, item_code: 'GDL-330', serial_number: 'GDL330-B-0312', status: 'unsold' },
+        { id: 104, item_code: 'GDL-330', serial_number: 'GDL330-C-0445', status: 'unsold' },
+        { id: 105, item_code: 'GDL-330', serial_number: 'GDL330-D-0991', status: 'unsold' },
+        { id: 106, item_code: 'GH-60', serial_number: 'GH60-X-1409', status: 'unsold' }
+    ];
+
+    let selectedSerials = []; // Array to store multiple chosen serial numbers
+
+    const serialSearchInput = document.getElementById('serialSearch');
+    const suggestionsBox = document.getElementById('suggestionsBox');
+    const itemSelect = document.getElementById('itemSelect');
+    const selectedTagsContainer = document.getElementById('selectedTagsContainer');
+    const noTagsText = document.getElementById('noTagsText');
+
+    // Live search and dropdown presentation on typing
+    serialSearchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        const selectedItem = itemSelect.value;
+        suggestionsBox.innerHTML = '';
+
+        if (query.length === 0) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        // Filter unsold items matching item code, query string, and NOT already selected
+        const matches = dbInventorySerials.filter(item => {
+            return item.item_code === selectedItem &&
+                   item.status === 'unsold' &&
+                   !selectedSerials.includes(item.serial_number) &&
+                   item.serial_number.toLowerCase().includes(query);
+        });
+
+        if (matches.length > 0) {
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerHTML = `<strong>${m.serial_number}</strong> <span style="color: #666; font-size: 12px;">(Click to add)</span>`;
+                
+                // When employee clicks a suggestion, add it to our selected list and keep searching/adding more
+                div.addEventListener('click', function() {
+                    selectedSerials.push(m.serial_number);
+                    renderTags();
+                    serialSearchInput.value = '';
+                    suggestionsBox.style.display = 'none';
+                    serialSearchInput.focus();
+                });
+                
+                suggestionsBox.appendChild(div);
+            });
+            suggestionsBox.style.display = 'block';
+        } else {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
+    // Function to render selected serial tags visually
+    function renderTags() {
+        // Clear container except text placeholder element reference
+        selectedTagsContainer.innerHTML = '';
+
+        if (selectedSerials.length === 0) {
+            selectedTagsContainer.appendChild(noTagsText);
+            return;
+        }
+
+        selectedSerials.forEach((serial, index) => {
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.innerHTML = `
+                ${serial} 
+                <span class="remove-btn" title="Remove">&times;</span>
+            `;
+
+            // Remove tag when clicking 'x'
+            tag.querySelector('.remove-btn').addEventListener('click', function() {
+                selectedSerials.splice(index, 1);
+                renderTags();
+            });
+
+            selectedTagsContainer.appendChild(tag);
+        });
+    }
+
+    // Hide dropdown if clicked outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#serialSearch') && !e.target.closest('#suggestionsBox')) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
+    // Handle form submission (Updating multiple serial statuses from 'unsold' to 'sold')
+    document.getElementById('saleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const alertBox = document.getElementById('alertMessage');
+        const outputLog = document.getElementById('outputLog');
+
+        if (selectedSerials.length === 0) {
+            alert('Please select at least one serial number.');
+            return;
+        }
+
+        const saleData = {
+            date: document.getElementById('saleDate').value,
+            client_name: document.getElementById('clientSelect').value,
+            item_code: document.getElementById('itemSelect').value,
+            serial_numbers: [...selectedSerials],
+            new_status: 'sold'
+        };
+
+        // Update status in our dummy database array for all chosen items
+        selectedSerials.forEach(serial => {
+            const record = dbInventorySerials.find(s => s.serial_number === serial);
+            if (record) {
+                record.status = 'sold';
+                record.client = saleData.client_name;
+                record.sale_date = saleData.date;
+            }
+        });
+
+        alertBox.textContent = `Successfully updated status to SOLD for ${selectedSerials.length} serial numbers!`;
+        alertBox.className = "message success";
+        alertBox.style.display = "block";
+
+        outputLog.textContent = JSON.stringify(saleData, null, 2);
+
+        // Reset form selections
+        selectedSerials = [];
+        renderTags();
+        serialSearchInput.value = '';
+        suggestionsBox.style.display = 'none';
+
+        setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+    });
+</script>
+
+</body>
+</html>
