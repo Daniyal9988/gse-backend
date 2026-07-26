@@ -19,4 +19,20 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.post('/verify-user', async (req, res) => {
+    try {
+        const { username } = req.body;
+        const query = 'SELECT username FROM users WHERE username = ?';
+        const [results] = await db.query(query, [username]);
+        
+        if (results.length > 0) {
+            res.json({ valid: true });
+        } else {
+            res.json({ valid: false });
+        }
+    } catch (err) {
+        res.status(500).json({ valid: false, error: err.message });
+    }
+});
+
 module.exports = router;
