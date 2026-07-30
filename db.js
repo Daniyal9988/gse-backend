@@ -1,4 +1,4 @@
-require('dotenv').config();
+// require('dotenv').config();
 const mysql = require('mysql2');
 
 // MySQL Database Connection Pool using environment variables
