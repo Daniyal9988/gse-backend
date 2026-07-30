@@ -1,3 +1,5 @@
+console.log("CHECKING DB_HOST:", process.env.DB_HOST);
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
