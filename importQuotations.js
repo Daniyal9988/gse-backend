@@ -1,5 +1,15 @@
+require('dotenv').config();
 const XLSX = require('xlsx');
-const db = require('./server'); // Imports your database pool directly from server.js
+const mysql = require('mysql2/promise');
+
+// Create a direct promise-based pool using your .env credentials
+const db = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 3306
+});
 
 const workbook = XLSX.readFile('QuotationData.xlsx');
 const sheetName = 'QuotationRecords';
@@ -17,13 +27,10 @@ async function runQuotationImport() {
         console.log(`Found ${data.length} quotation records. Starting import into MySQL...`);
 
         for (const row of data) {
-            // Map Excel serial date or string date to proper SQL format if needed, 
-            // or use row['Date'] directly depending on how sheet_to_json parses it.
             let rawDate = row['Date'];
             let formattedDate = null;
 
             if (rawDate) {
-                // If Excel date is a number (serial), convert it, otherwise use string
                 if (typeof rawDate === 'number') {
                     const utcDays = Math.floor(rawDate - 25569);
                     const utcValue = utcDays * 86400;
@@ -48,8 +55,8 @@ async function runQuotationImport() {
                 : JSON.stringify(row['ItemsJSON'] || []);
             const createdBy = row['CreatedBy'] || 'admin';
 
-            // Insert or update quotation record based on unique QuotationNo
-            await db.promise().query(
+            // Uses direct db.query since this pool natively supports promises
+            await db.query(
                 `INSERT INTO quotations 
                 (QuotationNo, ClientName, ContactPerson, ContactNo, Date, Subtotal, VAT, Total, ItemsJSON, CreatedBy) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -79,9 +86,11 @@ async function runQuotationImport() {
         }
 
         console.log("All quotation records successfully imported into the MySQL database!");
+        await db.end();
         process.exit(0);
     } catch (err) {
         console.error("Quotation import failed:", err);
+        await db.end();
         process.exit(1);
     }
 }

@@ -18,10 +18,7 @@ const app = express();
 
 // Whitelist allowed frontend origins (Restricts API access to only your frontend)
 const allowedOrigins = [
-  'https://gse-sa.com',           // Your live production frontend domain
-  'https://www.gse-sa.com',       // With www just in case
-  'http://localhost:5173',        // Local Vite/React development port (if applicable)
-  'http://localhost:3000',         // Local development port
+  'https://www.gse.sa.com',      
   'https://gse-iqs.vercel.app/'
 ];
 
