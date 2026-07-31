@@ -19,7 +19,7 @@ const app = express();
 // Whitelist allowed frontend origins (Restricts API access to only your frontend)
 const allowedOrigins = [
   'https://www.gse.sa.com',      
-  'https://gse-iqs.vercel.app/'
+  'https://gse-iqs.vercel.app'
 ];
 
 const corsOptions = {
