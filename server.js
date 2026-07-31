@@ -20,7 +20,8 @@ const allowedOrigins = [
   'https://www.gse-sa.com',       // With www just in case
   'http://localhost:5173',        // Local Vite/React development port (if applicable)
   'http://localhost:3000',         // Local development port
-  'https://gse-iqs.vercel.app/'
+  'https://gse-iqs.vercel.app/',
+  'https://gse-iqs-git-connecting-to-database-dany-s-projects.vercel.app'
 ];
 
 const corsOptions = {
