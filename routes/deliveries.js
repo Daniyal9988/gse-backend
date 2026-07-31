@@ -1,31 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const axios = require('axios');
+const FormData = require('form-data');
 const db = require('../db');
 
-// Configure storage to use public_html/uploads/deliveries/ directory with auto-creation
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../public_html/uploads/deliveries/');
-    
-    // Automatically create the folder if it does not exist
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Use memory storage so files are stored temporarily in RAM buffer
+const upload = multer({ storage: multer.memoryStorage() });
 
-const upload = multer({ storage: storage });
+// CPANEL CONFIG
+const CPANEL_UPLOAD_URL = 'https://mxk.dpn.mybluehost.me/api/upload_receiver.php';
+const CPANEL_SECRET_TOKEN = 'GSE-DATABASE-2021';
 
-// POST: Add new delivery record with file uploads
 router.post('/deliveries', upload.fields([
   { name: 'deliveryPhoto', maxCount: 1 },
   { name: 'deliveryNote', maxCount: 1 }
@@ -33,10 +19,44 @@ router.post('/deliveries', upload.fields([
   try {
     const { deliveryDate, quotationNumber, companyName } = req.body;
     
-    // Extract file paths relative to public_html or server storage
-    const deliveryPhotoPath = req.files && req.files['deliveryPhoto'] ? req.files['deliveryPhoto'][0].path : null;
-    const deliveryNotePath = req.files && req.files['deliveryNote'] ? req.files['deliveryNote'][0].path : null;
+    let deliveryPhotoPath = null;
+    let deliveryNotePath = null;
 
+    // If files were uploaded, forward them to cPanel via HTTP FormData
+    if (req.files && Object.keys(req.files).length > 0) {
+      const cPanelForm = new FormData();
+
+      if (req.files['deliveryPhoto']) {
+        const file = req.files['deliveryPhoto'][0];
+        cPanelForm.append('deliveryPhoto', file.buffer, {
+          filename: file.originalname,
+          contentType: file.mimetype
+        });
+      }
+
+      if (req.files['deliveryNote']) {
+        const file = req.files['deliveryNote'][0];
+        cPanelForm.append('deliveryNote', file.buffer, {
+          filename: file.originalname,
+          contentType: file.mimetype
+        });
+      }
+
+      // Send files to cPanel PHP script
+      const cPanelResponse = await axios.post(CPANEL_UPLOAD_URL, cPanelForm, {
+        headers: {
+          ...cPanelForm.getHeaders(),
+          'Authorization': `Bearer ${CPANEL_SECRET_TOKEN}`
+        }
+      });
+
+      if (cPanelResponse.data && cPanelResponse.data.success) {
+        deliveryPhotoPath = cPanelResponse.data.files.deliveryPhoto || null;
+        deliveryNotePath = cPanelResponse.data.files.deliveryNote || null;
+      }
+    }
+
+    // Save public cPanel URLs into your MySQL database
     const query = `
       INSERT INTO deliveries (delivery_date, quotation_number, company_name, delivery_photo_path, delivery_note_path) 
       VALUES (?, ?, ?, ?, ?)
@@ -46,11 +66,12 @@ router.post('/deliveries', upload.fields([
 
     res.status(201).json({
       success: true,
-      message: 'Delivery recorded successfully!',
-      data: { deliveryDate, quotationNumber, companyName }
+      message: 'Delivery recorded and files stored on cPanel successfully!',
+      data: { deliveryDate, quotationNumber, companyName, deliveryPhotoPath, deliveryNotePath }
     });
+
   } catch (error) {
-    console.error('Error saving delivery:', error);
+    console.error('Error saving delivery to cPanel:', error.response?.data || error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
