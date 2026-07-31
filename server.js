@@ -21,7 +21,7 @@ const allowedOrigins = [
   'http://localhost:5173',        // Local Vite/React development port (if applicable)
   'http://localhost:3000',         // Local development port
   'https://gse-iqs.vercel.app/',
-  'https://gse-iqs-git-connecting-to-database-dany-s-projects.vercel.app'
+  'https://gse-iqs-git-connecting-to-database'
 ];
 
 const corsOptions = {
