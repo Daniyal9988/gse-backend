@@ -10,6 +10,8 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const quotationRoutes = require('./routes/quotations');
 const deliveryRoutes = require('./routes/deliveries');
+const clientRoutes = require('./routes/clients');
+const priceRoutes = require('./routes/prices');
 // const serialRoutes = require('./routes/serial'); // Add your serial router here later when ready
 
 const app = express();
@@ -60,6 +62,8 @@ app.use('/api', authRoutes);
 app.use('/api', productRoutes);
 app.use('/api', quotationRoutes);
 app.use('/api', deliveryRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api', priceRoutes);
 // app.use('/api', serialRoutes); // Mount serial routes when created
 
 // Start Server Locally
