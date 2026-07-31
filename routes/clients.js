@@ -15,21 +15,19 @@ router.get('/', async (req, res) => {
 // Add a New Client
 router.post('/', async (req, res) => {
     try {
-        const { client_name, contact_person, phone_number, email, address } = req.body;
+        const { client_name, contact_person, phone_number } = req.body;
         if (!client_name) {
             return res.status(400).json({ success: false, error: 'Client name is required' });
         }
 
         const query = `
-            INSERT INTO clients (client_name, contact_person, phone_number, email, address) 
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO clients (client_name, contact_person, phone_number) 
+            VALUES (?, ?, ?)
         `;
         const [result] = await db.query(query, [
             client_name, 
             contact_person || '', 
-            phone_number || '', 
-            email || '', 
-            address || ''
+            phone_number || ''
         ]);
 
         res.json({ success: true, message: 'Client added successfully', clientId: result.insertId });
@@ -42,7 +40,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const clientId = req.params.id;
-        const { client_name, contact_person, phone_number, email, address } = req.body;
+        const { client_name, contact_person, phone_number } = req.body;
 
         if (!client_name) {
             return res.status(400).json({ success: false, error: 'Client name is required' });
@@ -50,15 +48,13 @@ router.put('/:id', async (req, res) => {
 
         const query = `
             UPDATE clients 
-            SET client_name = ?, contact_person = ?, phone_number = ?, email = ?, address = ? 
+            SET client_name = ?, contact_person = ?, phone_number = ? 
             WHERE id = ?
         `;
         await db.query(query, [
             client_name, 
             contact_person || '', 
             phone_number || '', 
-            email || '', 
-            address || '', 
             clientId
         ]);
 
