@@ -19,7 +19,8 @@ const app = express();
 // Whitelist allowed frontend origins (Restricts API access to only your frontend)
 const allowedOrigins = [
   'https://www.gse.sa.com',      
-  'https://gse-iqs.vercel.app'
+  'https://gse-iqs.vercel.app',
+  'http://localhost:5173'
 ];
 
 const corsOptions = {
@@ -41,7 +42,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Serve uploaded files statically so they can be accessed via URL
-app.use('/uploads', express.static(path.join(__dirname, 'public_html/uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Test DB Connection Endpoint
 app.get('/api/test', async (req, res) => {
@@ -68,3 +69,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Local backend server running on http://localhost:${PORT}`);
 });
+
+
