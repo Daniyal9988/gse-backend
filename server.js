@@ -12,7 +12,7 @@ const quotationRoutes = require('./routes/quotations');
 const deliveryRoutes = require('./routes/deliveries');
 const clientRoutes = require('./routes/clients');
 const priceRoutes = require('./routes/prices');
-// const serialRoutes = require('./routes/serial'); // Add your serial router here later when ready
+const serialRoutes = require('./routes/serial');
 
 const app = express();
 
@@ -62,7 +62,7 @@ app.use('/api', quotationRoutes);
 app.use('/api', deliveryRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api', priceRoutes);
-// app.use('/api', serialRoutes); // Mount serial routes when created
+app.use('/api', serialRoutes);
 
 // Start Server Locally
 const PORT = process.env.PORT || 3000;
