@@ -1,9 +1,8 @@
-console.log("CHECKING DB_HOST:", process.env.DB_HOST);
 
+const db = require('./db'); // Imports the promise-based db pool  
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./db'); // Imports the promise-based db pool
 
 // Import Route Modules
 const authRoutes = require('./routes/auth');
