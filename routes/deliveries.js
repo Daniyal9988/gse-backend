@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
-const { verifyAdmin } = require('../middleware/verifyAdmin');
+const { verifyAdminToken } = require('../middleware/authMiddleware');
 
 // Use memory storage so files are temporarily held in RAM to be sent to cPanel
 const upload = multer({
@@ -32,8 +32,6 @@ async function sendFilesToCPandel(files) {
 
   if (files['deliveryPicture']) {
     const pic = files['deliveryPicture'][0];
-    // Note: PHP script looks for 'deliveryPhotos[]' or single file depending on your setup. 
-    // Here we map deliveryPicture to deliveryPhotos[] to match your PHP script.
     formData.append('deliveryPhotos[]', pic.buffer, {
       filename: pic.originalname,
       contentType: pic.mimetype,
@@ -164,7 +162,7 @@ router.put('/deliveries/:id', uploadFields, async (req, res) => {
 });
 
 // 4. DELETE DELIVERY
-router.delete('/deliveries/:id', verifyAdmin, async (req, res) => {
+router.delete('/deliveries/:id', verifyAdminToken, async (req, res) => {
   try {
     const { id } = req.params;
     await db.query('DELETE FROM deliveries WHERE id = ?', [id]);

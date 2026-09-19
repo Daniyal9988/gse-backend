@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const jwt = require('jsonwebtoken');
 
 // User Login Endpoint
 router.post('/login', async (req, res) => {
@@ -10,7 +11,23 @@ router.post('/login', async (req, res) => {
         const [results] = await db.query(query, [username, password]);
         
         if (results.length > 0) {
-            res.json({ success: true, user: { username: results[0].username, role: results[0].role } });
+            const user = results[0];
+
+            // 1. Create the payload containing safe user information
+            const payload = {
+                username: user.username,
+                role: user.role
+            };
+
+            // 2. Sign the token using a secret key (ensure process.env.JWT_SECRET is set in your .env file)
+            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+
+            // 3. Send the token back to the frontend alongside the user details
+            res.json({ 
+                success: true, 
+                token, 
+                user: { username: user.username, role: user.role } 
+            });
         } else {
             res.status(401).json({ success: false, message: 'Invalid username or password' });
         }

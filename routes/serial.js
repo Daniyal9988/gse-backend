@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db'); // Adjust path to point to your main promise-based db pool connection file
-const { verifyAdmin } = require('../middleware/verifyAdmin');
+const { verifyAdminToken } = require('../middleware/authMiddleware');
 
 // 1. GET Unsold Inventory (Filtered by Item Code & Last 4 Digits Lookup)
 router.get('/inventory/unsold', async (req, res) => {
@@ -97,18 +97,23 @@ router.post('/sales/batch', async (req, res) => {
 });
 
 // 4. PUT Update Sold Record (Admin Only)
-router.put('/sales/:id', verifyAdmin, async (req, res) => {
+router.put('/sales/:id', verifyAdminToken, async (req, res) => {
     const saleId = req.params.id;
-    const { companyName, saleDate } = req.body;
+    
+    // Accept both camelCase and snake_case to prevent payload mapping errors
+    const companyName = req.body.companyName || req.body.company_name;
+    const saleDate = req.body.saleDate || req.body.sale_date;
 
     try {
+        const cleanDate = saleDate ? saleDate.substring(0, 10) : null;
+
         const [result] = await db.execute(
             'UPDATE sales_records SET company_name = ?, sale_date = ? WHERE id = ?',
-            [companyName, saleDate, saleId]
+            [companyName, cleanDate, saleId]
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Sold record not found." });
+            return res.status(404).json({ error: `Sales record with ID ${saleId} was not found.` });
         }
 
         res.json({ success: true, message: "Sold record updated successfully." });

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { verifyAdminToken } = require('../middleware/authMiddleware');
 
 // Get All Products & Stock (with optional client price lookup)
 router.get('/stock', async (req, res) => {
@@ -26,7 +27,7 @@ router.get('/stock', async (req, res) => {
 });
 
 // Upsert (Add or Update) Client-Specific Price
-router.post('/client-prices', async (req, res) => {
+router.post('/client-prices',verifyAdminToken, async (req, res) => {
     try {
         const { client_id, product_id, price } = req.body;
         if (!client_id || !product_id || price === undefined) {
@@ -60,7 +61,7 @@ router.post('/client-prices', async (req, res) => {
 });
 
 // Delete Client-Specific Price Override (Revert to Standard)
-router.delete('/client-prices', async (req, res) => {
+router.delete('/client-prices', verifyAdminToken,async (req, res) => {
     try {
         const { client_id, product_id } = req.body;
         await db.query(

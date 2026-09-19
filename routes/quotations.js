@@ -1,30 +1,45 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 // Get Paginated Quotations (with optional search filter)
-router.get('/quotations', async (req, res) => {
+router.get('/quotations', verifyToken, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 20;
         const page = parseInt(req.query.page, 10) || 1;
         const offset = (page - 1) * limit;
         const search = req.query.search ? `%${req.query.search.trim()}%` : '%';
+        
+        // Check if the request explicitly wants all records (e.g., for Delivery Notes)
+        const fetchAll = req.query.all === 'true';
 
-        // 1. Get total record count matching search filter
-        const countQuery = `
-            SELECT COUNT(*) as total FROM quotations 
-            WHERE QuotationNo LIKE ? OR ClientName LIKE ?
-        `;
-        const [countResult] = await db.query(countQuery, [search, search]);
+        const currentUser = req.user.username || req.user.name || '';
+        const currentRole = (req.user.role || 'staff').trim().toLowerCase();
+        const isAdmin = currentRole === 'admin' || fetchAll; // If fetchAll is true, treat like admin view
+
+        let baseWhere = `WHERE (QuotationNo LIKE ? OR ClientName LIKE ?)`;
+        let countParams = [search, search];
+        let dataParams = [search, search];
+
+        // Restrict non-admin users only if fetchAll is not requested
+        if (!isAdmin) {
+            baseWhere += ` AND (LOWER(CreatedBy) = LOWER(?) OR LOWER(CreatedBy) = LOWER(?))`;
+            countParams.push(currentUser, currentRole);
+            dataParams.push(currentUser, currentRole);
+        }
+
+        const countQuery = `SELECT COUNT(*) as total FROM quotations ${baseWhere}`;
+        const [countResult] = await db.query(countQuery, countParams);
         const totalRecords = countResult[0].total;
 
-        // 2. Fetch paginated records matching search filter
         const query = `
             SELECT * FROM quotations 
-            WHERE QuotationNo LIKE ? OR ClientName LIKE ? 
+            ${baseWhere}
             ORDER BY id DESC LIMIT ? OFFSET ?
         `;
-        const [results] = await db.query(query, [search, search, limit, offset]);
+        dataParams.push(limit, offset);
+        const [results] = await db.query(query, dataParams);
 
         res.json({
             success: true,
@@ -59,7 +74,6 @@ router.get('/quotations/next-number', async (req, res) => {
     }
 });
 
-// Save a New Quotation (THIS WAS MISSING)
 router.post('/quotations', async (req, res) => {
     try {
         const {

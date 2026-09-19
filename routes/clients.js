@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { verifyAdminToken } = require('../middleware/authMiddleware');
 
 // Get All Clients
-router.get('/', async (req, res) => {
+router.get('/', verifyAdminToken,async (req, res) => {
     try {
         const [results] = await db.query('SELECT * FROM clients ORDER BY client_name ASC');
         res.json({ success: true, data: results });
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
 });
 
 // Add a New Client
-router.post('/', async (req, res) => {
+router.post('/', verifyAdminToken,async (req, res) => {
     try {
         const { client_name, contact_person, phone_number } = req.body;
         if (!client_name) {
@@ -37,7 +38,7 @@ router.post('/', async (req, res) => {
 });
 
 // Edit / Update an Existing Client
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyAdminToken,async (req, res) => {
     try {
         const clientId = req.params.id;
         const { client_name, contact_person, phone_number } = req.body;
@@ -65,7 +66,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete a Client
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyAdminToken,async (req, res) => {
     try {
         const clientId = req.params.id;
         await db.query('DELETE FROM product_client_prices WHERE client_id = ?', [clientId]);
